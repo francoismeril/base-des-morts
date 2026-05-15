@@ -507,36 +507,89 @@ function ouvrirPhoto(url, commune) {
   }
   let cur = imgs.indexOf(url);
   let zoom = 1;
+  let tx = 0, ty = 0;
+  let dragging = false, startX, startY, startTx, startTy;
 
   const overlay = document.createElement("div");
-  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;";
+  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;overflow:hidden;";
 
   const img = document.createElement("img");
-  img.style.cssText = "max-width:85%;max-height:85%;border-radius:6px;box-shadow:0 0 30px rgba(0,0,0,0.8);transition:transform 0.2s;cursor:zoom-in;user-select:none;";
+  img.style.cssText = "max-width:85%;max-height:85%;border-radius:6px;box-shadow:0 0 30px rgba(0,0,0,0.8);transition:transform 0.1s;cursor:grab;user-select:none;";
   img.src = url;
 
-  // Zoom clic
-  img.addEventListener("click", e => {
-    e.stopPropagation();
-    zoom = zoom === 1 ? 2 : 1;
-    img.style.transform = `scale(${zoom})`;
-    img.style.cursor = zoom === 1 ? "zoom-in" : "zoom-out";
+  const applyTransform = () => {
+    img.style.transform = `translate(${tx}px,${ty}px) scale(${zoom})`;
+  };
+
+  const resetTransform = () => { zoom=1; tx=0; ty=0; applyTransform(); img.style.cursor="grab"; };
+
+  // Zoom molette
+  overlay.addEventListener("wheel", e => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 1.15 : 0.87;
+    zoom = Math.min(Math.max(zoom * delta, 1), 8);
+    if (zoom === 1) { tx=0; ty=0; }
+    applyTransform();
+    img.style.cursor = zoom > 1 ? "grab" : "grab";
+  }, { passive: false });
+
+  // Drag
+  img.addEventListener("mousedown", e => {
+    if (zoom <= 1) return;
+    e.preventDefault();
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    startTx = tx; startTy = ty;
+    img.style.cursor = "grabbing";
   });
+  window.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    tx = startTx + (e.clientX - startX);
+    ty = startTy + (e.clientY - startY);
+    applyTransform();
+  });
+  window.addEventListener("mouseup", () => {
+    dragging = false;
+    img.style.cursor = zoom > 1 ? "grab" : "grab";
+  });
+
+  // Touch drag (mobile)
+  img.addEventListener("touchstart", e => {
+    if (zoom <= 1 || e.touches.length !== 1) return;
+    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+    startTx = tx; startTy = ty; dragging = true;
+  });
+  img.addEventListener("touchmove", e => {
+    if (!dragging) return;
+    e.preventDefault();
+    tx = startTx + (e.touches[0].clientX - startX);
+    ty = startTy + (e.touches[0].clientY - startY);
+    applyTransform();
+  }, { passive: false });
+  img.addEventListener("touchend", () => { dragging = false; });
+
+  // Double-clic reset zoom
+  img.addEventListener("dblclick", e => { e.stopPropagation(); resetTransform(); });
 
   // Compteur
   const counter = document.createElement("div");
-  counter.style.cssText = "position:absolute;top:14px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;background:rgba(0,0,0,0.5);padding:4px 12px;border-radius:20px;";
+  counter.style.cssText = "position:absolute;top:14px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;background:rgba(0,0,0,0.5);padding:4px 12px;border-radius:20px;pointer-events:none;";
   const updateCounter = () => { counter.textContent = `${cur+1} / ${mon.nb}`; };
   updateCounter();
 
-  // Bouton fermer
+  // Hint zoom
+  const hint = document.createElement("div");
+  hint.textContent = "Molette pour zoomer · Double-clic pour réinitialiser";
+  hint.style.cssText = "position:absolute;bottom:14px;left:50%;transform:translateX(-50%);color:#aaa;font-size:11px;background:rgba(0,0,0,0.5);padding:3px 10px;border-radius:20px;pointer-events:none;white-space:nowrap;";
+
+  // Fermer
   const btnClose = document.createElement("div");
   btnClose.textContent = "✕";
-  btnClose.style.cssText = "position:absolute;top:14px;right:20px;color:#fff;font-size:22px;cursor:pointer;background:rgba(0,0,0,0.5);width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:50%;";
-  btnClose.onclick = () => document.body.removeChild(overlay);
+  btnClose.style.cssText = "position:absolute;top:14px;right:20px;color:#fff;font-size:20px;cursor:pointer;background:rgba(0,0,0,0.5);width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:50%;z-index:2;";
+  btnClose.onclick = e => { e.stopPropagation(); document.body.removeChild(overlay); };
 
   // Flèches
-  const btnStyle = "position:absolute;top:50%;transform:translateY(-50%);color:#fff;font-size:32px;cursor:pointer;background:rgba(0,0,0,0.4);width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:50%;user-select:none;";
+  const btnStyle = "position:absolute;top:50%;transform:translateY(-50%);color:#fff;font-size:36px;cursor:pointer;background:rgba(0,0,0,0.4);width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:50%;user-select:none;z-index:2;";
 
   const btnPrev = document.createElement("div");
   btnPrev.innerHTML = "&#8249;";
@@ -545,9 +598,7 @@ function ouvrirPhoto(url, commune) {
   btnPrev.onclick = e => {
     e.stopPropagation();
     cur = (cur - 1 + mon.nb) % mon.nb;
-    img.src = imgs[cur];
-    zoom = 1; img.style.transform = "scale(1)"; img.style.cursor = "zoom-in";
-    updateCounter();
+    img.src = imgs[cur]; resetTransform(); updateCounter();
   };
 
   const btnNext = document.createElement("div");
@@ -557,16 +608,17 @@ function ouvrirPhoto(url, commune) {
   btnNext.onclick = e => {
     e.stopPropagation();
     cur = (cur + 1) % mon.nb;
-    img.src = imgs[cur];
-    zoom = 1; img.style.transform = "scale(1)"; img.style.cursor = "zoom-in";
-    updateCounter();
+    img.src = imgs[cur]; resetTransform(); updateCounter();
   };
 
-  // Fermer en cliquant sur le fond
-  overlay.addEventListener("click", () => document.body.removeChild(overlay));
+  // Fermer fond (seulement si pas en train de dragger)
+  overlay.addEventListener("click", e => {
+    if (e.target === overlay) document.body.removeChild(overlay);
+  });
 
   overlay.appendChild(img);
   overlay.appendChild(counter);
+  overlay.appendChild(hint);
   overlay.appendChild(btnClose);
   overlay.appendChild(btnPrev);
   overlay.appendChild(btnNext);
