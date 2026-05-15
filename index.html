@@ -343,7 +343,7 @@ function afficherInfos(s) {
       const url = `${BASE_IMG}${mon.dossier}/${num}.jpg`;
       photos += `<img src="${url}"
         style="width:calc(50% - 3px);border-radius:4px;cursor:pointer;object-fit:cover;height:90px;"
-        onclick="ouvrirPhoto('${url}')"
+        onclick="ouvrirPhoto('${url}','${s.commune.replace(/'/g,"\\'")}')"
         onerror="this.style.display='none'">`;
     }
     photos += `</div></div>`;
@@ -498,11 +498,78 @@ document.addEventListener("click",e=>{
   if(!si.contains(e.target)&&!sr.contains(e.target)) sr.style.display="none";
 });
 
-function ouvrirPhoto(url) {
+function ouvrirPhoto(url, commune) {
+  const mon = MONUMENTS[commune];
+  if (!mon) return;
+  const imgs = [];
+  for (let i = 1; i <= mon.nb; i++) {
+    imgs.push(`${BASE_IMG}${mon.dossier}/${String(i).padStart(2,"0")}.jpg`);
+  }
+  let cur = imgs.indexOf(url);
+  let zoom = 1;
+
   const overlay = document.createElement("div");
-  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;";
-  overlay.innerHTML = `<img src="${url}" style="max-width:90%;max-height:90%;border-radius:6px;box-shadow:0 0 30px rgba(0,0,0,0.8);">`;
-  overlay.onclick = () => document.body.removeChild(overlay);
+  overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;";
+
+  const img = document.createElement("img");
+  img.style.cssText = "max-width:85%;max-height:85%;border-radius:6px;box-shadow:0 0 30px rgba(0,0,0,0.8);transition:transform 0.2s;cursor:zoom-in;user-select:none;";
+  img.src = url;
+
+  // Zoom clic
+  img.addEventListener("click", e => {
+    e.stopPropagation();
+    zoom = zoom === 1 ? 2 : 1;
+    img.style.transform = `scale(${zoom})`;
+    img.style.cursor = zoom === 1 ? "zoom-in" : "zoom-out";
+  });
+
+  // Compteur
+  const counter = document.createElement("div");
+  counter.style.cssText = "position:absolute;top:14px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;background:rgba(0,0,0,0.5);padding:4px 12px;border-radius:20px;";
+  const updateCounter = () => { counter.textContent = `${cur+1} / ${mon.nb}`; };
+  updateCounter();
+
+  // Bouton fermer
+  const btnClose = document.createElement("div");
+  btnClose.textContent = "✕";
+  btnClose.style.cssText = "position:absolute;top:14px;right:20px;color:#fff;font-size:22px;cursor:pointer;background:rgba(0,0,0,0.5);width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:50%;";
+  btnClose.onclick = () => document.body.removeChild(overlay);
+
+  // Flèches
+  const btnStyle = "position:absolute;top:50%;transform:translateY(-50%);color:#fff;font-size:32px;cursor:pointer;background:rgba(0,0,0,0.4);width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:50%;user-select:none;";
+
+  const btnPrev = document.createElement("div");
+  btnPrev.innerHTML = "&#8249;";
+  btnPrev.style.cssText = btnStyle + "left:16px;";
+  btnPrev.style.display = mon.nb <= 1 ? "none" : "flex";
+  btnPrev.onclick = e => {
+    e.stopPropagation();
+    cur = (cur - 1 + mon.nb) % mon.nb;
+    img.src = imgs[cur];
+    zoom = 1; img.style.transform = "scale(1)"; img.style.cursor = "zoom-in";
+    updateCounter();
+  };
+
+  const btnNext = document.createElement("div");
+  btnNext.innerHTML = "&#8250;";
+  btnNext.style.cssText = btnStyle + "right:16px;";
+  btnNext.style.display = mon.nb <= 1 ? "none" : "flex";
+  btnNext.onclick = e => {
+    e.stopPropagation();
+    cur = (cur + 1) % mon.nb;
+    img.src = imgs[cur];
+    zoom = 1; img.style.transform = "scale(1)"; img.style.cursor = "zoom-in";
+    updateCounter();
+  };
+
+  // Fermer en cliquant sur le fond
+  overlay.addEventListener("click", () => document.body.removeChild(overlay));
+
+  overlay.appendChild(img);
+  overlay.appendChild(counter);
+  overlay.appendChild(btnClose);
+  overlay.appendChild(btnPrev);
+  overlay.appendChild(btnNext);
   document.body.appendChild(overlay);
 }
 
