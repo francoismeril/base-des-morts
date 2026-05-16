@@ -364,7 +364,7 @@ function buildMarker(s) {
   m.bindPopup(pop)
    .bindTooltip(s.nom,{direction:"top",offset:[0,-11],opacity:0.9})
    .on("click",()=>afficherInfos(s));
-  idx[normalize(s.nom)] = {marker:m, data:s};
+  idx[normalize(s.nom) + "|" + normalize(s.commune)] = {marker:m, data:s};
   return m;
 }
 
@@ -486,7 +486,7 @@ si.addEventListener("input",()=>{
     d.addEventListener("click",()=>{
       sr.style.display="none"; si.value=s.nom;
       afficherInfos(s);
-      if(s.lat){ map.setView([s.lat,s.lng],12); const e=idx[normalize(s.nom)]; if(e) e.marker.openPopup(); }
+      if(s.lat){ map.setView([s.lat,s.lng],12); const e=idx[normalize(s.nom)+"|"+normalize(s.commune)]; if(e) e.marker.openPopup(); }
     });
     sr.appendChild(d);
   });
