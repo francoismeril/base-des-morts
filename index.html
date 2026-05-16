@@ -323,8 +323,8 @@ function afficherInfos(s) {
 
   /* Liens */
   let liens = "";
-  if (s.lien_mdh)
-    liens += `<a href="${s.lien_mdh}" target="_blank" class="lien">🎖️ Mémoire des Hommes (SGA Défense)</a>`;
+  if (s.lien_mdh && s.lien_mdh !== "?")
+    liens += `<div class="lien" style="color:#5a8ab5;cursor:default;">🎖️ Référencé sur Mémoire des Hommes (SGA Défense)</div>`;
   if (s.lien_arolsen)
     liens += `<a href="${s.lien_arolsen}" target="_blank" class="lien">📂 Archives Arolsen (déportation)</a>`;
   if (s.cote_archives)
