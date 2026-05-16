@@ -332,6 +332,16 @@ function afficherInfos(s) {
   if (liens)
     h += `<div class="bloc"><div class="bloc-titre">🔗 Sources</div>${liens}</div>`;
 
+  /* Livret Grande Guerre */
+  if (s.conflit === "1914-1918") {
+    h += `<div class="bloc">
+      <div class="bloc-titre">📖 Pour aller plus loin</div>
+      <a href="docs/grande-guerre.pdf" target="_blank" class="lien" style="color:#e67e22;">
+        Anecdotes et récits de la Grande Guerre — Canton de Pouancé
+      </a>
+    </div>`;
+  }
+
   /* Photos monument */
   const mon = MONUMENTS[s.commune];
   if (mon) {
